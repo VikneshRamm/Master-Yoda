@@ -125,7 +125,7 @@ def create_conversation(request: CreateConversationRequest):
         designation=designation,
         project=request.project,
         feedback_document_path=base64.b64encode(str(file_path).encode('utf-8')).decode('utf-8'),
-        clockify_user_id="6698b68c78057435d7c7a0d2"
+        clockify_user_id=settings.clockify_user_id
     )
 
     current_session = INITIAL_STATE.copy()
