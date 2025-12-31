@@ -21,9 +21,9 @@ export const Conversations = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col h-[100vh]">
       <Header />
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden h-[calc(100%-70px)]">
         <ConversationSidebar
           onNewConversation={handleNewConversation}
           selectedConversationId={selectedConversation?.id}

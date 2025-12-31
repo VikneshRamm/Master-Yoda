@@ -14,6 +14,7 @@ export const NewConversationModal = ({ onClose, onConversationCreated }: Props) 
   const { token } = useAuth();
   const [designationId, setDesignationId] = useState('');
   const [projectId, setProjectId] = useState('');
+  const [feedbackDocumentPath, setFeedbackDocumentPath] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
@@ -30,13 +31,14 @@ export const NewConversationModal = ({ onClose, onConversationCreated }: Props) 
   });
 
   const createConversationMutation = useMutation({
-    mutationFn: (data) =>
+    mutationFn: () =>
       conversationApi.createConversation(
         {
           designation_id: designationId,
-          project_id: projectId,
+          project: projects.find((p) => p.id === projectId)!,
           start_date: startDate,
           end_date: endDate,
+          feedback_document_path: feedbackDocumentPath
         },
         token!
       ),
@@ -124,6 +126,18 @@ export const NewConversationModal = ({ onClose, onConversationCreated }: Props) 
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Feedback Document Path
+            </label>
+            <input
+              type="text"
+              value={feedbackDocumentPath}
+              onChange={(e) => setFeedbackDocumentPath(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all outline-none"
             />
           </div>

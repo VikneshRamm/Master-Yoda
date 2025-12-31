@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL + '/api';
 
 export const API_ENDPOINTS = {
   auth: {
@@ -10,6 +10,7 @@ export const API_ENDPOINTS = {
     getById: (id: string) => `${API_BASE_URL}/conversations/${id}`,
     messages: (id: string) => `${API_BASE_URL}/conversations/${id}/messages`,
     sendMessage: (id: string) => `${API_BASE_URL}/conversations/${id}/messages`,
+    sendMessageStream: (id: string) => `${API_BASE_URL}/conversations/${id}/messages/stream`,
   },
   designations: {
     list: `${API_BASE_URL}/designations`,
