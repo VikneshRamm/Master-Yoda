@@ -33,9 +33,10 @@ export interface Project {
 
 export interface CreateConversationRequest {
   designation_id: string;
-  project_id: string;
+  project: Project;
   start_date: string;
   end_date: string;
+  feedback_document_path: string;
 }
 
 export interface SendMessageRequest {

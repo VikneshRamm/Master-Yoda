@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { useAuth } from '../contexts/AuthContext';
 import { MessageSquare } from 'lucide-react';
+import styles from './Home.module.css';
 
 export const Home = () => {
   const navigate = useNavigate();
@@ -12,7 +13,7 @@ export const Home = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className={`min-h-screen bg-gray-50 ${styles.main}`}>
       <Header />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white rounded-xl shadow-sm p-8">
