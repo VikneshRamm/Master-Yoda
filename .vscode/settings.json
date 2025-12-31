@@ -1,0 +1,3 @@
+{
+  "python.defaultInterpreterPath": "${workspaceFolder}/Services/AppraisalGuide/.venv/bin/python"
+}

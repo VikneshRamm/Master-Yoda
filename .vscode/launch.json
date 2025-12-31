@@ -1,0 +1,15 @@
+{
+"version": "0.2.0",
+"configurations": [
+{
+"name": "Python: FastAPI (run.py)",
+"type": "debugpy",
+"request": "launch",
+"program": "${workspaceFolder}/Services/AppraisalGuide/run.py",
+"cwd": "${workspaceFolder}/Services/AppraisalGuide",
+"console": "integratedTerminal",
+"justMyCode": false,
+"envFile": "${workspaceFolder}/Services/AppraisalGuide/.env"
+}
+]
+}
