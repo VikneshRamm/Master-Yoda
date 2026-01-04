@@ -33,8 +33,9 @@ class Conversation(BaseModel):
     feedback_document_path: str
     clockify_user_id: str
 
-EventType = Literal["status", "message", "complete", "full_text"]
+EventType = Literal["status", "message", "complete", "full_text", "state_update"]
 
 class StreamingResponseChunk(BaseModel):
     data: str
     type: EventType
+    current_step: str

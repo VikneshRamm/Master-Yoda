@@ -1,11 +1,14 @@
 import json
+import constants
 from typing import Any, Dict
+from utils import extract_json
 from state import AppState
 from llm import llm
 from langchain_core.tools import tool
 from tools.clockify_tools import get_all_descriptions
 from tools.feedback_doc_reader import parse_feedback_excel
 
+CURRENT_STEP = constants.CONTEXT_BUILDER_STEP
 
 @tool
 def get_clockify_work_descriptions(project_id: str, user_id: str, rangeStart: str, rangeEnd: str) -> str:
@@ -50,7 +53,7 @@ async def context_builder(state: AppState, stream_callback) -> Dict[str, Any]:
     1. Fetching and filtering development work from Clockify time logs
     2. Summarizing feedback received by the user
     """
-    await stream_callback({"type": "status", "data": "Building project context..."})
+    await stream_callback({"type": "status", "data": "Building project context...", "current_step": CURRENT_STEP})
     
     # Prepare tools for the LLM
     tools = [get_clockify_work_descriptions, get_feedback_summary]
@@ -116,17 +119,22 @@ Remember to filter only actual development work from Clockify and provide a conc
         {"role": "user", "content": user_message}
     ]
     
-    await stream_callback({"type": "status", "data": "Calling LLM with tools..."})
+    await stream_callback({"type": "status", "data": "Calling LLM with tools...", "current_step": CURRENT_STEP})
+
+    await stream_callback({
+            "type": "state_update",
+            "data": json.dumps({"current_step": constants.CONTEXT_BUILDER_STEP}),
+            "current_step": constants.CONTEXT_BUILDER_STEP
+        })
     
     # Invoke the LLM with tools
     response = await llm_with_tools.ainvoke(messages)
 
     try:
-
     
     # Handle tool calls if any
         while response.tool_calls:
-            await stream_callback({"type": "status", "data": f"Executing tools: {len(response.tool_calls)} tool(s)..."})
+            await stream_callback({"type": "status", "data": f"Executing tools: {len(response.tool_calls)} tool(s)...", "current_step": CURRENT_STEP})
             
             messages.append(response)
             
@@ -134,7 +142,7 @@ Remember to filter only actual development work from Clockify and provide a conc
                 tool_name = tool_call["name"]
                 tool_args = tool_call["args"]
                 
-                await stream_callback({"type": "status", "data": f"Calling {tool_name}..."})
+                await stream_callback({"type": "status", "data": f"Calling {tool_name}...", "current_step": CURRENT_STEP})
                 
                 if tool_name == "get_clockify_work_descriptions":
                     tool_result = get_all_descriptions(**tool_args)
@@ -152,25 +160,33 @@ Remember to filter only actual development work from Clockify and provide a conc
             # Get next response from LLM
             response = await llm_with_tools.ainvoke(messages)
         
-        await stream_callback({"type": "status", "data": "Processing LLM response..."})
+        await stream_callback({"type": "status", "data": "Processing LLM response...", "current_step": CURRENT_STEP})
         
         # Extract the final response
         if response.text:
-            final_response = json.dumps(extract_json(response.text), indent=4)
+            context_builder_data = extract_json(response.text)
+            await stream_callback({
+            "type": "state_update",
+            "data": json.dumps({"context_builder_data": context_builder_data if context_builder_data else {}}),
+            "current_step": CURRENT_STEP
+        })
+            final_response = json.dumps(context_builder_data, indent=4)
         else:
             final_response = "{{\"error\": \"No response text from LLM\"}}"
         
-        await stream_callback({"type": "status", "data": "Project context built successfully."})
+        await stream_callback({"type": "status", "data": "Project context built successfully.", "current_step": CURRENT_STEP})
         
         # Stream the final response
         await stream_callback({
             "data": final_response,
-            "type": "full_text"
+            "type": "metadata",
+            "current_step": CURRENT_STEP
         })
-        
+
         await stream_callback({
-            "data": "",
-            "type": "complete"
+            "data": "I have reviewed your work activities and feedback document to build your project context. Let me start evaluating your performance based on this information.",
+            "type": "full_text",
+            "current_step": CURRENT_STEP
         })
         
         return {
@@ -179,23 +195,10 @@ Remember to filter only actual development work from Clockify and provide a conc
             "current_step": "context_builder",
         }
     except Exception as e:
-        await stream_callback({"type": "status", "data": f"Error occurred: {str(e)}"})
+        await stream_callback({"type": "full_text", "data": f"Error occurred: {str(e)}", "current_step": CURRENT_STEP})
         return {
             "messages": state["messages"],
             "current_node_complete": False,
             "error": str(e),
             "current_step": "context_builder",
         }
-
-
-def extract_json(text: str) -> Dict[str, Any]:
-    """
-    Extract the JSON substring from the LLM output.
-    Simplified extraction for prototype.
-    """
-    import json
-    import re
-    match = re.search(r'\{[\s\S]*\}', text)
-    if match:
-        return json.loads(match.group(0))
-    return {}

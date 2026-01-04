@@ -1,5 +1,5 @@
 # workflow.py
-
+import constants
 from langgraph.graph import StateGraph, END
 from state import AppState
 
@@ -23,39 +23,60 @@ async def start_node(state, config):
     stream_callback = config['configurable']["stream_callback"]
     return await start(state, stream_callback)
 
+# create node for evaluation agent
+async def evaluation_node(state, config):
+    from agents.evaluation_agent import evaluation_agent
+    stream_callback = config['configurable']["stream_callback"]
+    return await evaluation_agent(state, stream_callback)
+
 def intake_router(state):
     if state["current_node_complete"]:
-        return "context_builder"
+        return constants.CONTEXT_BUILDER_STEP
     # If waiting for user input OR not complete, end the workflow
     return END
 
 def context_builder_router(state):
-    return END
+    return constants.EVALUATION_STEP
 
 def start_router(state):
-    return state.get("current_step", "intake")
+    return state.get("current_step", constants.PROJECT_INTAKE_STEP)
+
+def evaluation_node_router(state):
+    if state["current_node_complete"]:
+        return END
+    if state["wait_for_user_input"]:
+        return END
+    if not state["current_node_complete"] and not state["wait_for_user_input"]:
+        return constants.EVALUATION_STEP
+    return END
 
 graph.add_node("start", start_node)
-graph.add_node("intake", intake_node)
-graph.add_node("context_builder", context_builder_node)
-
-graph.add_edge("start", "intake")
-graph.add_edge("intake", "context_builder")
+graph.add_node(constants.PROJECT_INTAKE_STEP, intake_node)
+graph.add_node(constants.CONTEXT_BUILDER_STEP, context_builder_node)
+graph.add_node(constants.EVALUATION_STEP, evaluation_node)
+# graph.add_edge("start", "intake")
+# graph.add_edge("intake", "context_builder")
+# graph.add_edge("context_builder", "evaluation")
 
 # End when intake is complete
 graph.add_conditional_edges(
-    "intake",
+    constants.PROJECT_INTAKE_STEP,
     intake_router
 )
 
 graph.add_conditional_edges(
-    "context_builder",
+    constants.CONTEXT_BUILDER_STEP,
     context_builder_router
 )
 
 graph.add_conditional_edges(
     "start",
     start_router
+)
+
+graph.add_conditional_edges(
+    constants.EVALUATION_STEP,
+    evaluation_node_router
 )
 
 graph.set_entry_point("start")

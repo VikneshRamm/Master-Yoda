@@ -12,6 +12,9 @@ class AppState(TypedDict):
     error: str
     clockify_data: Dict[str, Any]
     feedback_document_path: str
+    completed_outcomes: List[str]
+    outcome_under_evaluation: str
+    context_builder_data: Dict[str, Any]
 
 INITIAL_STATE: AppState = {
     "messages": [],
@@ -21,5 +24,10 @@ INITIAL_STATE: AppState = {
     "conversation": {},
     "current_step": "",
     "designation": "",
-    "error": ""
+    "error": "",
+    "completed_outcomes": [],
+    "clockify_data": {},
+    "feedback_document_path": "",
+    "outcome_under_evaluation": "",
+    "context_builder_data": {}
 }

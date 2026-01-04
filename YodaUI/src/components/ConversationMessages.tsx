@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ChevronDown } from 'lucide-react';
 import { conversationApi } from '../api/conversation';
 import { useAuth } from '../contexts/AuthContext';
 import { MessageInput } from './MessageInput';
@@ -15,6 +16,14 @@ interface StreamingMessage {
   content: string;
   role: 'assistant';
   created_at: string;
+  message_section?: string;
+  message_type?: string;
+}
+
+interface MessageGroup {
+  section: string;
+  normalMessages: Message[];
+  metadataMessages: Message[];
 }
 
 export const ConversationMessages = ({ conversation }: Props) => {
@@ -25,12 +34,58 @@ export const ConversationMessages = ({ conversation }: Props) => {
   const [streamingMessage, setStreamingMessage] = useState<StreamingMessage | null>(null);
   const [currentStatus, setCurrentStatus] = useState('');
   const [streamError, setStreamError] = useState<string | null>(null);
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  const [expandedMetadata, setExpandedMetadata] = useState<Set<string>>(new Set());
 
   const { data: messages = [] } = useQuery({
     queryKey: ['messages', conversation.id],
     queryFn: () => conversationApi.getMessages(conversation.id, token!),
     enabled: !!token,
   });
+
+  const groupMessagesBySection = (msgs: Message[]): MessageGroup[] => {
+    const groupMap = new Map<string, MessageGroup>();
+
+    msgs.forEach((message) => {
+      const section = message.message_section || 'General';
+      if (!groupMap.has(section)) {
+        groupMap.set(section, {
+          section,
+          normalMessages: [],
+          metadataMessages: [],
+        });
+      }
+
+      const group = groupMap.get(section)!;
+      if (message.message_type === 'metadata') {
+        group.metadataMessages.push(message);
+      } else {
+        group.normalMessages.push(message);
+      }
+    });
+
+    return Array.from(groupMap.values());
+  };
+
+  const toggleSection = (section: string) => {
+    const newExpanded = new Set(expandedSections);
+    if (newExpanded.has(section)) {
+      newExpanded.delete(section);
+    } else {
+      newExpanded.add(section);
+    }
+    setExpandedSections(newExpanded);
+  };
+
+  const toggleMetadata = (section: string) => {
+    const newExpanded = new Set(expandedMetadata);
+    if (newExpanded.has(section)) {
+      newExpanded.delete(section);
+    } else {
+      newExpanded.add(section);
+    }
+    setExpandedMetadata(newExpanded);
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -39,6 +94,13 @@ export const ConversationMessages = ({ conversation }: Props) => {
   useEffect(() => {
     scrollToBottom();
   }, [messages, streamingMessage]);
+
+  useEffect(() => {
+    const groups = groupMessagesBySection(messages);
+    if (expandedSections.size === 0 && groups.length > 0) {
+      setExpandedSections(new Set(groups.map((g) => g.section)));
+    }
+  }, []);
 
   const handleSendMessage = async (message: string) => {
     setIsStreaming(true);
@@ -57,6 +119,8 @@ export const ConversationMessages = ({ conversation }: Props) => {
       role: 'user',
       content: message,
       created_at: new Date().toISOString(),
+      message_section: messages[messages.length - 1]?.message_section || 'General',
+      message_type: '',
     });
 
     try {
@@ -95,9 +159,43 @@ export const ConversationMessages = ({ conversation }: Props) => {
     }
   };
 
+  const renderMessage = (msg: Message) => (
+    <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+      <div
+        className={`max-w-md px-4 py-3 rounded-lg ${
+          msg.role === 'user'
+            ? 'bg-green-600 text-white'
+            : 'bg-white text-gray-900 border border-gray-200'
+        }`}
+      >
+        <p className="text-sm">{msg.content}</p>
+        <p
+          className={`text-xs mt-2 ${
+            msg.role === 'user' ? 'text-green-100' : 'text-gray-500'
+          }`}
+        >
+          {new Date(msg.created_at).toLocaleTimeString()}
+        </p>
+      </div>
+    </div>
+  );
+
+  const renderMetadataMessage = (msg: Message) => (
+    <div key={msg.id} className="flex justify-start">
+      <div className="max-w-md px-4 py-3 rounded-lg bg-gray-100 text-gray-900 border border-gray-300 italic">
+        <p className="text-xs">{msg.content}</p>
+        <p className="text-xs mt-2 text-gray-500">
+          {new Date(msg.created_at).toLocaleTimeString()}
+        </p>
+      </div>
+    </div>
+  );
+
+  const groups = groupMessagesBySection(messages);
+
   return (
     <div className="flex flex-col h-full bg-gray-50">
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {messages.length === 0 && !streamingMessage ? (
           <div className="flex items-center justify-center h-full">
             <p className="text-gray-500 text-center">
@@ -105,29 +203,51 @@ export const ConversationMessages = ({ conversation }: Props) => {
             </p>
           </div>
         ) : (
-          messages.map((message: Message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div
-                className={`max-w-md px-4 py-3 rounded-lg ${
-                  message.role === 'user'
-                    ? 'bg-green-600 text-white'
-                    : 'bg-white text-gray-900 border border-gray-200'
-                }`}
-              >
-                <p className="text-sm">{message.content}</p>
-                <p
-                  className={`text-xs mt-2 ${
-                    message.role === 'user' ? 'text-green-100' : 'text-gray-500'
-                  }`}
+          <>
+            {groups.map((group) => (
+              <div key={group.section} className="space-y-3">
+                <button
+                  onClick={() => toggleSection(group.section)}
+                  className="flex items-center gap-2 text-lg font-bold text-gray-800 hover:text-gray-600 transition-colors"
                 >
-                  {new Date(message.created_at).toLocaleTimeString()}
-                </p>
+                  <ChevronDown
+                    className={`w-5 h-5 transition-transform ${
+                      expandedSections.has(group.section) ? 'rotate-0' : '-rotate-90'
+                    }`}
+                  />
+                  {group.section}
+                </button>
+
+                {expandedSections.has(group.section) && (
+                  <div className="space-y-3 ml-6">
+                    {group.normalMessages.map((msg) => renderMessage(msg))}
+
+                    {group.metadataMessages.length > 0 && (
+                      <div className="mt-4 pt-4 border-t border-gray-300">
+                        <button
+                          onClick={() => toggleMetadata(group.section)}
+                          className="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-gray-600 transition-colors"
+                        >
+                          <ChevronDown
+                            className={`w-4 h-4 transition-transform ${
+                              expandedMetadata.has(group.section) ? 'rotate-0' : '-rotate-90'
+                            }`}
+                          />
+                          Metadata ({group.metadataMessages.length})
+                        </button>
+
+                        {expandedMetadata.has(group.section) && (
+                          <div className="space-y-2 mt-3 ml-4">
+                            {group.metadataMessages.map((msg) => renderMetadataMessage(msg))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            </div>
-          ))
+            ))}
+          </>
         )}
 
         {streamingMessage && (

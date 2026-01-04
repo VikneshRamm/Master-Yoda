@@ -1,5 +1,8 @@
 import uvicorn
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 debug_mode = os.getenv("DEBUG", "False").lower() in ("true", "1", "t")
 print(f"Debug mode is {'on' if debug_mode else 'off'}")
