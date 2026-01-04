@@ -1,9 +1,14 @@
 # agents/project_intake.py
 
+import json
+import constants
 from typing import Dict, Any
+from utils import extract_json, strip_unwanted_properties
 from state import AppState
 from llm import llm
 from langchain_core.prompts import PromptTemplate
+
+CURRENT_STEP = constants.PROJECT_INTAKE_STEP
 
 INTAKE_PROMPT = PromptTemplate(template="""
 You are an Intake Agent in a multi-agent performance appraisal system.
@@ -73,9 +78,17 @@ async def project_intake_agent(state: AppState, stream_callback):
     try:
         messages = state["messages"]
 
+        messages = strip_unwanted_properties(messages)
+
         print("Project Intake Agent invoked with state:", state)
 
-        designation = state.get("designation", "")                
+        designation = state.get("designation", "")
+
+        await stream_callback({
+            "type": "state_update",
+            "data": json.dumps({"current_step": constants.PROJECT_INTAKE_STEP}),
+            "current_step": CURRENT_STEP
+        })
 
         INTAKE_PROMPT_FORMATTED = INTAKE_PROMPT.format(
             designation=designation)
@@ -92,7 +105,8 @@ async def project_intake_agent(state: AppState, stream_callback):
         full_output = ""
         await stream_callback({
             "data": "Yoda is thinking...",
-            "type": "status"
+            "type": "status",
+            "current_step": CURRENT_STEP
         })
         
         async for chunk in llm.astream(final_messages):
@@ -104,7 +118,8 @@ async def project_intake_agent(state: AppState, stream_callback):
                     continue
                 await stream_callback({
                     "data": piece,
-                    "type": "message"
+                    "type": "message",
+                    "current_step": CURRENT_STEP
                 })   # STREAM TO FRONTEND
 
         
@@ -121,11 +136,13 @@ async def project_intake_agent(state: AppState, stream_callback):
         else:
             await stream_callback({
                 "data": full_output,
-                "type": "full_text"
+                "type": "full_text",
+                "current_step": CURRENT_STEP
             })  # SIGNAL FINAL TEXT
             await stream_callback({
                 "data": "",
-                "type": "complete"
+                "type": "complete",
+                "current_step": CURRENT_STEP
             })  # SIGNAL END OF STREAM
 
         # Intake continues → assistant asked a follow-up question
@@ -139,11 +156,13 @@ async def project_intake_agent(state: AppState, stream_callback):
          print("Error in project_intake_agent:", e)
          await stream_callback({
             "data": "Unable to give you response at the moment. Error: " + str(e),
-            "type": "message"
+            "type": "full_text",
+            "current_step": CURRENT_STEP
          })
          await stream_callback({
             "data": "",
-            "type": "complete"
+            "type": "complete",
+            "current_step": CURRENT_STEP
          })  # SIGNAL END OF STREAM
          return {
             "messages": messages + [{"role": "assistant", "content": "Error in processing your request."}],
@@ -152,16 +171,3 @@ async def project_intake_agent(state: AppState, stream_callback):
             "error": str(e),
             "current_step": "intake"
         }
-
-
-def extract_json(text: str) -> Dict[str, Any]:
-    """
-    Extract the JSON substring from the LLM output.
-    Simplified extraction for prototype.
-    """
-    import json
-    import re
-    match = re.search(r'\{[\s\S]*\}', text)
-    if match:
-        return json.loads(match.group(0))
-    return {}

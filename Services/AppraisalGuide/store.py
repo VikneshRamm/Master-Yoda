@@ -11,3 +11,27 @@ available_designations = [
     Designation(id="7", name="Solution Architect", description="Designs user interfaces and experiences to enhance user satisfaction."),
     Designation(id="8", name="Project Manager", description="Designs user interfaces and experiences to enhance user satisfaction."),
 ]
+
+available_outcomes = {
+    "Project Engineer": [{
+        "outcome": "Deliver high-quality impactful features to customers",
+        "expectation": "Understand the requirements of customers for impactful features that "
+        "contribute to business outcomes. Consistently deliver clean, efficient, high-quality, "
+        "on-time, and maintainable code along with documentation that meets the requirements."
+        },
+    ],
+    "Senior Project Engineer": [{
+        "outcome": "Deliver high-quality, impactful modules to customers on time",
+        "expectation": "Understand the project requirements and objectives that contribute to "
+        "business outcomes. Drive them to actionable plan and achieve success by architecting and"
+        " implementing scalable, reliable, maintainable, and efficient modules, "
+        "ensuring on-time high-quality delivery within budget. "
+        }, {
+            "outcome": "Stakeholders (Customers and/or leads) are always up to date with the status of your module",
+            "expectation": "Take full ownership of modules from concept to delivery."
+            " Maintain clear and effective communication with internal stakeholders and customers"
+            " by providing clear visibility on progress. Respond to customer needs and feedback"
+            " promptly and professionally. "
+        }
+    ],
+}

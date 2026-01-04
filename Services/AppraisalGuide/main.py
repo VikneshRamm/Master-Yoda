@@ -53,13 +53,17 @@ async def chat_stream(conversation_id: str, message: dict):
 
     # Initialize session if not exists
     current_session = session_store.load_session(conversation_id)
+    msgs = current_session["messages"]
+    current_step =  msgs[len(msgs) - 1].get("message_section", "General") if msgs else "General"
 
     current_session["messages"].append({
         "id": str(uuid4()),
         "role": "user",
         "content": user_message,
         "created_at": datetime.datetime.utcnow().isoformat(),
-        "conversation_id": conversation_id
+        "conversation_id": conversation_id,
+        "message_section": current_step,
+        "message_type": ""
     })
 
     session_store.save_session(conversation_id, current_session)
@@ -81,6 +85,11 @@ async def chat_stream(conversation_id: str, message: dict):
         while True:
             token: StreamingResponseChunk = await queue.get()
             print("Yielding token:", token)
+            if token["type"] == "state_update":
+                # Update session state
+                state_value = json.loads(token["data"])
+                for key in state_value:
+                    current_session[key] = state_value[key]
             # if token contains FINAL_TEXT, split the string with FINAL_TEXT and store the second part in SESSION
             if token['type'] == "full_text":
                 current_session["messages"].append({
@@ -88,7 +97,20 @@ async def chat_stream(conversation_id: str, message: dict):
                     "content": token['data'],
                     "id": str(uuid4()),
                     "created_at": datetime.datetime.utcnow().isoformat(),
-                    "conversation_id": conversation_id
+                    "conversation_id": conversation_id,
+                    "message_section": token["current_step"],
+                    "message_type": ""
+                })
+                continue
+            if token['type'] == "metadata":
+                current_session["messages"].append({
+                    "role": "assistant",
+                    "content": token['data'],
+                    "id": str(uuid4()),
+                    "created_at": datetime.datetime.utcnow().isoformat(),
+                    "conversation_id": conversation_id,
+                    "message_section": token["current_step"],
+                    "message_type": "metadata"
                 })
                 continue
             if token['type'] == "complete":

@@ -17,6 +17,8 @@ export interface Message {
   role: 'user' | 'assistant';
   content: string;
   created_at: string;
+  message_section?: string;
+  message_type?: string;
 }
 
 export interface Designation {

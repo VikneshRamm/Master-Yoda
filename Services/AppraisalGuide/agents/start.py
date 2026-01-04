@@ -1,3 +1,4 @@
+import constants
 from state import AppState
 
 async def start(state: AppState, stream_callback):
@@ -6,7 +7,7 @@ async def start(state: AppState, stream_callback):
         "data": "Starting to process..."
     })
     cs = state.get("current_step")
-    next_step = cs if (cs and cs != "start") else "intake"
+    next_step = cs if (cs and cs != "start") else constants.PROJECT_INTAKE_STEP
     return {
         "current_node_complete": True,
         "current_step": next_step,
