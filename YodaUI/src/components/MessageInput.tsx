@@ -71,13 +71,22 @@ export const MessageInput = ({ onSendMessage, isLoading }: Props) => {
 
       <div className="p-4">
         <div className="flex gap-3">
-          <input
+          {/* <input
             type="text"
             value={displayText}
             onChange={(e) => setMessage(e.target.value)}
             disabled={isLoading || isListening}
             placeholder="Type your message or use voice..."
             className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all outline-none disabled:bg-gray-50"
+          /> */}
+          <textarea
+            value={displayText}
+            onChange={(e) => setMessage(e.target.value)}
+            disabled={isLoading || isListening}
+            placeholder="Type your message or use voice..."
+            className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all outline-none disabled:bg-gray-50 resize-none"
+            rows={2}
+            style={{ minHeight: '48px', maxHeight: '160px', overflow: 'auto', whiteSpace: 'pre-wrap' }}
           />
 
           {isSupported && (
